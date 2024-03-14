@@ -1,15 +1,27 @@
 # dependency-injection
 
-To install dependencies:
+This project is a demonstration of dependency injection in JavaScript using the Bun framework.
+
+## Installation
+
+To install the project dependencies, run the following command:
 
 ```bash
 bun install
 ```
 
-To run:
+## Running the project
+
+To run the project, run the following command:
 
 ```bash
 bun run index.ts
 ```
 
-This project was created using `bun init` in bun v1.0.30. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+## Running the tests
+
+To run the tests, run the following command:
+
+```bash
+bun test
+```
