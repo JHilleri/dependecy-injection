@@ -1,4 +1,4 @@
-import { Injector, injectionToken, inject } from "./inject";
+import { Injector, injectionToken, inject, runInContext } from "./lib";
 
 class TestClass {
   test() {
@@ -19,7 +19,7 @@ inject(TestClass).test();
 inject<{ test: () => void }>(testFunction).test();
 
 function printTestTokenContent(content = inject(testToken).content) {
-  console.log('testTokenContent', content);
+  console.log("testTokenContent", content);
 }
 
 console.log("overiden");
@@ -40,4 +40,4 @@ const customInjector = new Injector([
 
 customInjector.inject(TestClass).test();
 
-customInjector.runInContext(printTestTokenContent);
+runInContext(printTestTokenContent, customInjector);
