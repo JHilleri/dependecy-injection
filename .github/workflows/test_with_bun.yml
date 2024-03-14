@@ -10,7 +10,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     container:
-      image: oven/bun:distroless
+      image: oven/bun:latest
 
     steps:
       - name: Checkout code
