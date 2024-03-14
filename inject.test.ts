@@ -1,12 +1,13 @@
 import { expect, test } from "bun:test";
 import {
+  inject,
   Injector,
   injectionToken,
-  providerWithClass,
   providerWithValue,
-  inject,
+  providerWithClass,
   providerWithFactory,
-} from "./inject";
+  runInContext,
+} from "./lib";
 
 function functionOk() {
   return true;
@@ -111,13 +112,13 @@ test("inject overridden lambda", () => {
 test("runInContext", () => {
   const injector = new Injector([providerWithValue(token, true)]);
 
-  const result = injector.runInContext(() => inject(token));
+  const result = runInContext(() => inject(token), injector);
 
   expect(result).toBeTrue();
 });
 
 test("combined dependency", () => {
-  const result = new Injector().runInContext(() => {
+  const result = runInContext(() => {
     return inject(CombinedDependency).test();
   });
   expect(result).toBeTrue();
@@ -140,4 +141,25 @@ test("instances are saved", () => {
 
   expect(instance1.getValue()).toBe(1);
   expect(instance2.getValue()).toBe(1);
+});
+
+test("parent injector", () => {
+  const token = injectionToken<string>("test");
+  const tokenFromParent = injectionToken<string>("test parent");
+
+  const parentInjector = new Injector(
+    [providerWithValue(token, "parent"), providerWithValue(tokenFromParent, "parent")],
+    undefined
+  );
+
+  const childInjectorA = new Injector(
+    [providerWithValue(token, "childA")],
+    parentInjector
+  );
+
+  const resultA = runInContext(() => inject(token), childInjectorA);
+  const resultParent = runInContext(() => inject(tokenFromParent), childInjectorA);
+
+  expect(resultA).toBe("childA");
+  expect(resultParent).toBe("parent");
 });
