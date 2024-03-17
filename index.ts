@@ -1,4 +1,4 @@
-import { Injector, injectionToken, inject, runInContext } from "./lib";
+import { Injector, injectionToken, inject, runInInjectionContext } from "./lib";
 
 class TestClass {
   test() {
@@ -14,9 +14,9 @@ function testFunction() {
 
 const testToken = injectionToken<{ content: string }>("message");
 
-inject(TestClass).test();
+runInInjectionContext(() => inject(TestClass).test());
 
-inject<{ test: () => void }>(testFunction).test();
+runInInjectionContext(() => inject<{ test: () => void }>(testFunction).test());
 
 function printTestTokenContent(content = inject(testToken).content) {
   console.log("testTokenContent", content);
@@ -40,4 +40,9 @@ const customInjector = new Injector([
 
 customInjector.inject(TestClass).test();
 
-runInContext(printTestTokenContent, customInjector);
+runInInjectionContext(printTestTokenContent, customInjector);
+
+const parentInjector = new Injector([TestClass]);
+const childInjector = new Injector([], parentInjector);
+
+const instance = runInInjectionContext(() => inject(TestClass), childInjector);

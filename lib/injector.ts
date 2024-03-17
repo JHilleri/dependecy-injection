@@ -1,70 +1,117 @@
 import type { InjectionToken } from "./injection-token";
 import type { Provider } from "./provider";
+import {
+  instateWithClassOrFactory,
+  normalizeProviders,
+  instanciateWithProvider,
+} from "./utils";
 
-function isClass(obj: unknown): obj is new () => unknown {
-  return typeof obj === "function" && /^class\s/.test(obj.toString());
-}
+let currentInjector: Injector | undefined = undefined;
 
 export class Injector {
-  #tokens = new Map<unknown, unknown>();
-  factories = new Map<InjectionToken<unknown>, Provider<unknown>>();
+  #instances = new Map<unknown, unknown>();
+  #providers = new Map<InjectionToken<unknown>, Provider<unknown>>();
   #parent: Injector | undefined;
 
-  constructor(providers?: Provider<unknown>[], parent?: Injector) {
-    this.#parent = parent;
+  constructor(
+    providers?: (Provider<unknown> | (() => unknown) | (new () => unknown))[],
+    parent?: Injector
+  ) {
+    this.#parent = parent ?? currentInjector;
 
-    if (!providers) {
-      return;
+    if (providers) {
+      for (const provider of normalizeProviders(providers)) {
+        this.#providers.set(provider.provide, provider);
+      }
     }
-
-    providers.forEach((provider) => {
-      this.factories.set(provider.provide, provider);
-    });
   }
 
   get parent(): Injector | undefined {
     return this.#parent;
   }
 
-  inject<T>(token: InjectionToken<T>): T {
-    if (this.#tokens.has(token)) {
-      return this.#tokens.get(token) as T;
+  hasInstance(token: InjectionToken<unknown>): boolean {
+    if (this.#providers.has(token) || this.#instances.has(token)) {
+      return true;
     }
 
-    const factory = this.factories.get(token);
-    if (!factory) {
-      if (this.#parent) {
-        return this.#parent.inject(token);
-      }
-
-      if (typeof token !== "function") {
-        throw new Error("No provider for " + token);
-      }
-
-      if (isClass(token)) {
-        const instance = new token();
-        this.#tokens.set(token, instance);
-        return instance as T;
-      }
-
-      const instance = (token as () => T)();
-      this.#tokens.set(token, instance);
-      return instance as T;
+    if (this.#parent) {
+      return this.#parent.hasInstance(token);
     }
 
-    if ("useClass" in factory) {
-      const instance = new factory.useClass();
-      this.#tokens.set(token, instance);
-      return instance as T;
-    }
-
-    if ("useValue" in factory) {
-      this.#tokens.set(token, factory.useValue);
-      return factory.useValue as T;
-    }
-
-    const instance = factory.useFactory();
-    this.#tokens.set(token, instance);
-    return instance as T;
+    return false;
   }
+
+  hasProvider(token: InjectionToken<unknown>): boolean {
+    if (this.#providers.has(token)) {
+      return true;
+    }
+
+    if (this.#parent) {
+      return this.#parent.hasProvider(token);
+    }
+
+    return false;
+  }
+
+  inject<T>(token: InjectionToken<T>): T {
+    if (this.#instances.has(token)) {
+      return this.#instances.get(token) as T;
+    }
+
+    const provider = this.#providers.get(token);
+    if (provider) {
+      const instance = instanciateWithProvider(provider) as T;
+      this.#instances.set(token, instance);
+      return instance;
+    }
+
+    if (this.#parent?.hasProvider(token)) {
+      return this.#parent?.inject(token) as T;
+    }
+
+    if (this.#parent?.hasInstance(token)) {
+      return this.#parent.getInstance(token) as T;
+    }
+
+    const instance = instateWithClassOrFactory(token);
+    this.#instances.set(token, instance);
+    return instance;
+  }
+
+  getInstance<T>(token: InjectionToken<T>): T | undefined {
+    if (this.#instances.has(token)) {
+      return this.#instances.get(token) as T;
+    }
+
+    if (this.#parent) {
+      return this.#parent.getInstance(token);
+    }
+
+    return undefined;
+  }
+
+  runInContext<T>(fn: () => T): T {
+    const prevInjector = currentInjector;
+    currentInjector = this;
+    try {
+      return fn();
+    } finally {
+      currentInjector = prevInjector;
+    }
+  }
+}
+
+const defaultInjector = new Injector([]);
+
+export function inject<T>(token: InjectionToken<T>): T {
+  if (currentInjector === undefined) {
+    throw new Error("inject must be called within an injection context.");
+  }
+
+  return currentInjector.inject(token);
+}
+
+export function runInInjectionContext<T>(fn: () => T, injector?: Injector): T {
+  return (injector ?? currentInjector ?? defaultInjector)?.runInContext<T>(fn);
 }

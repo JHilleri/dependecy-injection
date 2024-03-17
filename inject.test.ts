@@ -6,7 +6,7 @@ import {
   providerWithValue,
   providerWithClass,
   providerWithFactory,
-  runInContext,
+  runInInjectionContext,
 } from "./lib";
 
 function functionOk() {
@@ -44,27 +44,35 @@ class CombinedDependency {
   }
 }
 
+test("inject without context", () => {
+  expect(() => inject(functionOk)).toThrow(
+    "inject must be called within an injection context."
+  );
+});
+
 test("inject function", () => {
-  const result = inject(functionOk);
+  const result = runInInjectionContext(() => inject(functionOk));
 
   expect(result).toBeTrue();
 });
 
 test("inject class", () => {
-  const instance = inject(classOk);
+  const instance = runInInjectionContext(() => inject(classOk));
   const result = instance.test();
 
   expect(result).toBeTrue();
 });
 
 test("inject lambda", () => {
-  const result = inject(lambdaOk);
+  const result = runInInjectionContext(() => inject(lambdaOk));
 
   expect(result).toBeTrue();
 });
 
 test("inject unprovided token", () => {
-  expect(() => inject(token)).toThrow("No provider for [object Object]");
+  expect(() => runInInjectionContext(() => inject(token))).toThrow(
+    "No provider for [object Object]"
+  );
 });
 
 test("inject provided token", () => {
@@ -112,13 +120,13 @@ test("inject overridden lambda", () => {
 test("runInContext", () => {
   const injector = new Injector([providerWithValue(token, true)]);
 
-  const result = runInContext(() => inject(token), injector);
+  const result = runInInjectionContext(() => inject(token), injector);
 
   expect(result).toBeTrue();
 });
 
 test("combined dependency", () => {
-  const result = runInContext(() => {
+  const result = runInInjectionContext(() => {
     return inject(CombinedDependency).test();
   });
   expect(result).toBeTrue();
@@ -135,12 +143,14 @@ test("instances are saved", () => {
     }
   }
 
-  const instance1 = inject(Cache);
-  instance1.increment();
-  const instance2 = inject(Cache);
+  runInInjectionContext(() => {
+    const instance1 = inject(Cache);
+    instance1.increment();
+    const instance2 = inject(Cache);
 
-  expect(instance1.getValue()).toBe(1);
-  expect(instance2.getValue()).toBe(1);
+    expect(instance1.getValue()).toBe(1);
+    expect(instance2.getValue()).toBe(1);
+  });
 });
 
 test("parent injector", () => {
@@ -148,7 +158,10 @@ test("parent injector", () => {
   const tokenFromParent = injectionToken<string>("test parent");
 
   const parentInjector = new Injector(
-    [providerWithValue(token, "parent"), providerWithValue(tokenFromParent, "parent")],
+    [
+      providerWithValue(token, "parent"),
+      providerWithValue(tokenFromParent, "parent"),
+    ],
     undefined
   );
 
@@ -157,9 +170,33 @@ test("parent injector", () => {
     parentInjector
   );
 
-  const resultA = runInContext(() => inject(token), childInjectorA);
-  const resultParent = runInContext(() => inject(tokenFromParent), childInjectorA);
+  const resultA = runInInjectionContext(() => inject(token), childInjectorA);
+  const resultParent = runInInjectionContext(
+    () => inject(tokenFromParent),
+    childInjectorA
+  );
 
   expect(resultA).toBe("childA");
   expect(resultParent).toBe("parent");
 });
+
+test("child recieves new instance", () => {
+  const parentInjector = new Injector();
+  const childInjector = new Injector([], parentInjector);
+
+  const instance = runInInjectionContext(() => inject(classOk), childInjector);
+
+  expect(instance).toBeInstanceOf(classOk);
+  expect(childInjector.hasInstance(classOk)).toBeTrue();
+  expect(parentInjector.hasInstance(classOk)).toBeFalse();
+});
+
+test("parent with provider get instance", () => {
+  const parentInjector = new Injector([classOk]);
+  const childInjector = new Injector([], parentInjector);
+
+  const instance = runInInjectionContext(() => inject(classOk), childInjector);
+
+  expect(instance).toBeInstanceOf(classOk);
+  expect(childInjector.hasInstance(classOk)).toBeTrue();
+})
