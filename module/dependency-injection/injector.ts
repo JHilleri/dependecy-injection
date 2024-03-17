@@ -1,5 +1,5 @@
 import type { InjectionToken } from "./injection-token";
-import type { Provider } from "./provider";
+import type { Provider, ProviderLike } from "./provider";
 import {
   instateWithClassOrFactory,
   normalizeProviders,
@@ -14,7 +14,7 @@ export class Injector {
   #parent: Injector | undefined;
 
   constructor(
-    providers?: (Provider<unknown> | (() => unknown) | (new () => unknown))[],
+    providers?: (ProviderLike<unknown>)[],
     parent?: Injector
   ) {
     this.#parent = parent ?? currentInjector;

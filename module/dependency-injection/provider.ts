@@ -17,6 +17,11 @@ export type Provider<T> =
   | ProviderWithFactory<T>
   | ProviderWithValue<T>;
 
+export type ProviderLike<T> =
+  | Provider<T>
+  | (() => unknown)
+  | (new () => unknown);
+
 export function providerWithValue<T>(
   token: InjectionToken<T>,
   value: T

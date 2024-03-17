@@ -26,6 +26,8 @@
 
     // local modules
     "paths": {
-      "module/dependency-injection": ["./module/dependency-injection/index.ts"]}
+      "module/dependency-injection": ["./module/dependency-injection/index.ts"]
+    },
+    "jsxImportSource": "hono/jsx"
   }
 }
