@@ -1,4 +1,4 @@
-import { Injector, injectionToken, inject, runInInjectionContext } from "./lib";
+import { Injector, injectionToken, inject, runInInjectionContext } from "module/dependency-injection";
 
 class TestClass {
   test() {

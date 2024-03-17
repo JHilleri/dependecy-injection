@@ -1,13 +1,7 @@
 import { expect, test } from "bun:test";
-import {
-  inject,
-  Injector,
-  injectionToken,
-  providerWithValue,
-  providerWithClass,
-  providerWithFactory,
-  runInInjectionContext,
-} from "./lib";
+import { injectionToken } from "./injection-token";
+import { inject, runInInjectionContext, Injector } from "./injector";
+import { providerWithValue, providerWithClass, providerWithFactory } from "./provider";
 
 function functionOk() {
   return true;

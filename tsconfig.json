@@ -22,6 +22,10 @@
     // Some stricter flags (disabled by default)
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noPropertyAccessFromIndexSignature": false
+    "noPropertyAccessFromIndexSignature": false,
+
+    // local modules
+    "paths": {
+      "module/dependency-injection": ["./module/dependency-injection/index.ts"]}
   }
 }
