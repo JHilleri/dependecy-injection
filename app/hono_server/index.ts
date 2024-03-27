@@ -1,12 +1,15 @@
 import { Hono } from "hono";
 import { inject, Injector } from "module/dependency-injection";
 import { globalInjector, requestInjector } from "./injection-middleware";
-import { info } from "./info";
-import { appTitle, requestId, serverId } from "./utils";
+import { TITLE, counterValue, requestId, SERVER_ID } from "./utils";
+import { renderComponent } from "module/hono-components";
+import { Info } from "./components/info.component";
+import { Table } from "./components/table.component";
+import { Dictionary } from "./components/dictionary.component";
 
 const appInjector = new Injector([
   {
-    provide: serverId,
+    provide: SERVER_ID,
     useFactory: () => `hono-server-${crypto.randomUUID()}`,
   },
 ]);
@@ -18,7 +21,7 @@ app.use(globalInjector(appInjector));
 app.use(
   requestInjector([
     {
-      provide: appTitle,
+      provide: TITLE,
       useValue: "test injection with hono",
     },
     requestId,
@@ -26,16 +29,32 @@ app.use(
 );
 
 app.get("/", (c) => {
-  return c.text(inject(appTitle));
+  return c.text(inject(TITLE));
 });
 
-app.get("/test", (c) => {
+app.get("api/info/:message?", (c) => {
   return c.json({
     requestId: inject(requestId),
-    serverName: inject(serverId),
+    serverName: inject(SERVER_ID),
+    message: c.req.param("message"),
+    title: inject(TITLE),
+    counter: inject(counterValue),
   });
 });
 
-app.route("jsx", info);
+app.get("info/list/:message?", ...renderComponent(Info, { title: "List" }));
+
+app.get(
+  "info/array/:message?",
+  ...renderComponent(Info, {
+    title: "Array",
+    providers: [
+      {
+        provide: Dictionary,
+        useFactory: Table,
+      },
+    ],
+  })
+);
 
 export default app;

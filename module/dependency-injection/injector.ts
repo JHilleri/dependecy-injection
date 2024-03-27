@@ -13,10 +13,7 @@ export class Injector {
   #providers = new Map<InjectionToken<unknown>, Provider<unknown>>();
   #parent: Injector | undefined;
 
-  constructor(
-    providers?: (ProviderLike<unknown>)[],
-    parent?: Injector
-  ) {
+  constructor(providers?: ProviderLike<unknown>[], parent?: Injector) {
     this.#parent = parent ?? currentInjector;
 
     if (providers) {
@@ -114,4 +111,14 @@ export function inject<T>(token: InjectionToken<T>): T {
 
 export function runInInjectionContext<T>(fn: () => T, injector?: Injector): T {
   return (injector ?? currentInjector ?? defaultInjector)?.runInContext<T>(fn);
+}
+
+export function runOutsideInjectionContext<T>(fn: () => T): T {
+  const prevInjector = currentInjector;
+  currentInjector = undefined;
+  try {
+    return fn();
+  } finally {
+    currentInjector = prevInjector;
+  }
 }
